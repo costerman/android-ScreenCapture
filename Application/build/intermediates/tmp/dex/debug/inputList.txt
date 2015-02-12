@@ -1,0 +1,7 @@
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/classes/debug
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/internal_impl-21.0.2-4fac864cbaf7743c7d4753004eafadc3403023b3.jar
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/support-annotations-21.0.2-68a86ddfb8f286b34389a1944037aab61de7dace.jar
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/classes-765267a1b1058cf50d811a141372f1f4c0fd7ee1.jar
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/classes-3e6d2956022c6590757b24b07c537fd4afe934b7.jar
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/internal_impl-21.0.2-740fa0400422f8227115766d8a8e0a81e3c79bd7.jar
+/Users/costerman/Git/android-ScreenCapture/Application/build/intermediates/pre-dexed/debug/classes-08d87c81f4184fa5bde6559582117d9d4f493dba.jar

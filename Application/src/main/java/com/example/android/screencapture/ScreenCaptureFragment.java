@@ -180,11 +180,15 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     }
 
     private void setUpVirtualDisplay() {
+
+        int height = mSurfaceView.getHeight() - 20;
+        int width = mSurfaceView.getWidth();
+
         Log.i(TAG, "Setting up a VirtualDisplay: " +
-                mSurfaceView.getWidth() + "x" + mSurfaceView.getHeight() +
+                width + "x" + height +
                 " (" + mScreenDensity + ")");
         mVirtualDisplay = mMediaProjection.createVirtualDisplay("ScreenCapture",
-                mSurfaceView.getWidth(), mSurfaceView.getHeight(), mScreenDensity,
+                width, height, mScreenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mSurface, null, null);
         mButtonToggle.setText(R.string.stop);
