@@ -181,7 +181,7 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
 
     private void setUpVirtualDisplay() {
 
-        int height = mSurfaceView.getHeight() - 20;
+        int height = mSurfaceView.getHeight();
         int width = mSurfaceView.getWidth();
 
         Log.i(TAG, "Setting up a VirtualDisplay: " +
