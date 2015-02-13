@@ -19,11 +19,21 @@ package com.example.android.screencapture;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.Image;
+import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.DisplayMetrics;
@@ -36,6 +46,13 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.example.android.common.logger.Log;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.UUID;
 
 /**
  * Provides UI for the screen capture.
@@ -54,6 +71,10 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     private int mResultCode;
     private Intent mResultData;
 
+    DisplayMetrics mMetrics = new DisplayMetrics();
+    private Context mContext;
+    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private ImageReader mImageReader;
     private Surface mSurface;
     private MediaProjection mMediaProjection;
     private VirtualDisplay mVirtualDisplay;
@@ -68,6 +89,7 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
             mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE);
             mResultData = savedInstanceState.getParcelable(STATE_RESULT_DATA);
         }
+        mContext = getActivity();
     }
 
     @Nullable
@@ -88,9 +110,9 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         Activity activity = getActivity();
-        DisplayMetrics metrics = new DisplayMetrics();
-        activity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        mScreenDensity = metrics.densityDpi;
+
+        activity.getWindowManager().getDefaultDisplay().getMetrics(mMetrics);
+        mScreenDensity = mMetrics.densityDpi;
         mMediaProjectionManager = (MediaProjectionManager)
                 activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
     }
@@ -149,6 +171,11 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
         tearDownMediaProjection();
     }
 
+    private boolean getScreenshotSetting(){
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+        return sharedPreferences.getBoolean(SettingsActivity.KEY_PREF_CAPTURE_SCREENSHOT, false);
+    }
+
     private void setUpMediaProjection() {
         mMediaProjection = mMediaProjectionManager.getMediaProjection(mResultCode, mResultData);
     }
@@ -181,6 +208,14 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
 
     private void setUpVirtualDisplay() {
 
+        if(getScreenshotSetting()){
+            setUpVirtualImageReaderDisplay();
+        } else {
+            setUpVirtualSurfaceViewDisplay();
+        }
+    }
+
+    private void setUpVirtualSurfaceViewDisplay(){
         int height = mSurfaceView.getHeight();
         int width = mSurfaceView.getWidth();
 
@@ -194,6 +229,21 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
         mButtonToggle.setText(R.string.stop);
     }
 
+    private void setUpVirtualImageReaderDisplay(){
+        int height = mSurfaceView.getHeight();
+        int width = mSurfaceView.getWidth();
+
+
+        mImageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+        mVirtualDisplay = mMediaProjection.createVirtualDisplay("Screenshot",
+                width, height, mScreenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mImageReader.getSurface(),
+                new VirtualDisplayCallback(),
+                mHandler);
+        mImageReader.setOnImageAvailableListener(new ImageAvailableCallback(height, width), mHandler);
+    }
+
     private void stopScreenCapture() {
         if (mVirtualDisplay == null) {
             return;
@@ -201,6 +251,105 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
         mVirtualDisplay.release();
         mVirtualDisplay = null;
         mButtonToggle.setText(R.string.start);
+    }
+
+
+    private class VirtualDisplayCallback extends VirtualDisplay.Callback{
+        @Override
+        public void onPaused(){
+            super.onPaused();
+            Log.d(TAG, "VirtualDisplayCallback: onPaused");
+        }
+
+        @Override
+        public void onResumed(){
+            super.onResumed();
+            Log.d(TAG, "VirtualDisplayCallback: onResumed");
+        }
+
+        @Override
+        public void onStopped(){
+            super.onStopped();
+            Log.d(TAG, "VirtualDisplayCallback: onStopped");
+        }
+    }
+
+    private class ImageAvailableCallback implements ImageReader.OnImageAvailableListener{
+
+        private int mHeight;
+        private int mWidth;
+
+        private ImageAvailableCallback(int height, int width){
+            mHeight = height;
+            mWidth = width;
+        }
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            //Process the image
+            Image image = null;
+            FileOutputStream fos = null;
+            Bitmap bitmap = null;
+
+            try{
+                String filename = String.format("Screenshot-%s.jpeg", UUID.randomUUID().toString());
+
+                image = mImageReader.acquireLatestImage();
+                int height = image.getHeight();
+                int width = image.getWidth();
+                fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/" + filename);
+                final Image.Plane[] planes = image.getPlanes();
+
+                final int PIXEL_FORMAT = 4;
+                final int HEADER_BUFFER_CAPACITY = 12;
+                ByteBuffer.allocate(HEADER_BUFFER_CAPACITY).order(ByteOrder.LITTLE_ENDIAN).putInt(width).putInt(height).putInt(PIXEL_FORMAT).rewind();
+
+                //Attempt #1
+                final Buffer buffer = planes[0].getBuffer().rewind();
+                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+
+
+                //Attempt #2
+//                int offset = 0;
+//                int pixelStride = planes[0].getPixelStride();
+//                int rowStride = planes[0].getRowStride();
+//                int rowPadding = rowStride - pixelStride * width;
+//                bitmap = Bitmap.createBitmap(mMetrics, width, height, Bitmap.Config.ARGB_8888);
+//                final ByteBuffer buffer = planes[0].getBuffer();
+//                for (int i = 0; i < height; ++i) {
+//                    for (int j = 0; j < width; ++j) {
+//                        int pixel = 0;
+//                        pixel |= (buffer.get(offset) & 0xff) << 16;     // R
+//                        pixel |= (buffer.get(offset + 1) & 0xff) << 8;  // G
+//                        pixel |= (buffer.get(offset + 2) & 0xff);       // B
+//                        pixel |= (buffer.get(offset + 3) & 0xff) << 24; // A
+//                        bitmap.setPixel(j, i, pixel);
+//                        offset += pixelStride;
+//                    }
+//                    offset += rowPadding;
+//                }
+
+
+                bitmap.copyPixelsFromBuffer(buffer);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            } catch (Exception ex){
+                ex.printStackTrace();
+            } finally {
+                if(fos != null){
+                    try{
+                        fos.close();
+                    } catch (IOException ioe){
+                        ioe.printStackTrace();
+                    }
+                }
+                if(bitmap != null){
+                    bitmap.recycle();
+                }
+                if(image != null){
+                    image.close();
+                }
+            }
+        }
     }
 
 }

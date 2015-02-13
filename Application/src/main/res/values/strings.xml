@@ -18,4 +18,8 @@ limitations under the License.
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="user_cancelled">User denied screen sharing permission</string>
+    <string name="screenshot_pref_title">Capture Screenshot</string>
+    <string name="screenshot_pref_summary">When this is enabled MediaProjection API will direct output to an
+        ImageReader Surface instead of the SurfaceView.</string>
+    <string name="settings">Settings</string>
 </resources>

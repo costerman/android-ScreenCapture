@@ -16,6 +16,7 @@
 
 package com.example.android.screencapture;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
 import android.view.Menu;
@@ -41,6 +42,7 @@ public class MainActivity extends SampleActivityBase {
 
     // Whether the Log Fragment is currently shown
     private boolean mLogShown;
+    private static final int SETTINGS_RESULT = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,8 +85,18 @@ public class MainActivity extends SampleActivityBase {
                 }
                 supportInvalidateOptionsMenu();
                 return true;
+            case R.id.menu_toggle_settings:
+                Intent intent = new Intent(this.getApplicationContext(), SettingsActivity.class);
+                startActivityForResult(intent, SETTINGS_RESULT);
+                return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     /** Create a chain of targets that will receive log data */
