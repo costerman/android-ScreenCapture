@@ -115,6 +115,16 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
         mScreenDensity = mMetrics.densityDpi;
         mMediaProjectionManager = (MediaProjectionManager)
                 activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+        // start capture handling thread
+        new Thread() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                mHandler = new Handler();
+                Looper.loop();
+            }
+        }.start();
     }
 
     @Override
@@ -237,7 +247,7 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
         mImageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
         mVirtualDisplay = mMediaProjection.createVirtualDisplay("Screenshot",
                 width, height, mScreenDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                 mImageReader.getSurface(),
                 new VirtualDisplayCallback(),
                 mHandler);
@@ -305,8 +315,8 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
                 ByteBuffer.allocate(HEADER_BUFFER_CAPACITY).order(ByteOrder.LITTLE_ENDIAN).putInt(width).putInt(height).putInt(PIXEL_FORMAT).rewind();
 
                 //Attempt #1
-                final Buffer buffer = planes[0].getBuffer().rewind();
-                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+//                final Buffer buffer = planes[0].getBuffer().rewind();
+//                bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
 
                 //Attempt #2
@@ -328,9 +338,43 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
 //                    }
 //                    offset += rowPadding;
 //                }
+//                bitmap.copyPixelsFromBuffer(buffer);
+//                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
+                //Attempt #3 - working
+                if (bitmap == null) {
+                    bitmap = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
+                }
+                final ByteBuffer imageBuffer = (ByteBuffer) planes[0].getBuffer().rewind();
+                byte[] buffer = new byte[imageBuffer.capacity()];
+                imageBuffer.get(buffer);
+                imageBuffer.position(0);
 
-                bitmap.copyPixelsFromBuffer(buffer);
+                int stride = planes[0].getRowStride() / planes[0].getPixelStride();
+
+                int[] pixels = new int[stride * image.getHeight()];
+                int length = buffer.length;
+
+                for (int ix = 0; ix < length; ix+= 4) {
+
+                    int rowPos = ix != 0 ? ix >> 2 : 0;
+
+                    pixels[rowPos] =
+                            0xff000000 & buffer[ix + 3] << 24 |
+                                    0xff0000   & buffer[ix]     << 16 |
+                                    0xff00     & buffer[ix + 1] << 8  |
+                                    0xff       & buffer[ix + 2];
+                }
+
+                bitmap.setPixels(
+                        pixels,
+                        0,
+                        stride,
+                        0, 0,
+                        image.getWidth(),
+                        image.getHeight()
+                );
+
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
             } catch (Exception ex){
                 ex.printStackTrace();
