@@ -21,4 +21,7 @@
     <item android:id="@+id/menu_toggle_settings"
           android:showAsAction="always"
           android:title="@string/settings"/>
+    <item android:id="@+id/menu_image_capture"
+          android:showAsAction="always"
+          android:title="Capture Image"/>
 </menu>

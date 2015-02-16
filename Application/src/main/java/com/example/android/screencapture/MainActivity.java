@@ -89,6 +89,10 @@ public class MainActivity extends SampleActivityBase {
                 Intent intent = new Intent(this.getApplicationContext(), SettingsActivity.class);
                 startActivityForResult(intent, SETTINGS_RESULT);
                 return true;
+            case R.id.menu_image_capture:
+                Intent screenCaptureIntent = new Intent(this.getApplicationContext(), ScreenCaptureImageActivity.class);
+                startActivity(screenCaptureIntent);
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }

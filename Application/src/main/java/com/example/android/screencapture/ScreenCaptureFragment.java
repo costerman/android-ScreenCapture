@@ -292,7 +292,7 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
             Bitmap bitmap = null;
 
             try{
-                String filename = String.format("Screenshot-%s.jpeg", UUID.randomUUID().toString());
+                String filename = String.format("Screenshot-%s.png", UUID.randomUUID().toString());
 
                 image = mImageReader.acquireLatestImage();
                 int height = image.getHeight();
