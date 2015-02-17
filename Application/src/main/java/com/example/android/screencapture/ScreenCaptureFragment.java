@@ -81,6 +81,7 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     private MediaProjectionManager mMediaProjectionManager;
     private Button mButtonToggle;
     private SurfaceView mSurfaceView;
+    private View mRootView;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -95,15 +96,49 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_screen_capture, container, false);
+
+        View view = inflater.inflate(R.layout.fragment_screen_capture, container, false);
+        return view;
     }
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         mSurfaceView = (SurfaceView) view.findViewById(R.id.surface);
         mSurface = mSurfaceView.getHolder().getSurface();
+
         mButtonToggle = (Button) view.findViewById(R.id.toggle);
         mButtonToggle.setOnClickListener(this);
+
+        mRootView = view.getRootView();
+        mRootView.setDrawingCacheEnabled(true);
+
+        Button snapshot = (Button) view.findViewById(R.id.snapshot);
+        snapshot.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mRootView.buildDrawingCache();
+                Bitmap bitmap = Bitmap.createBitmap(mRootView.getDrawingCache());
+                FileOutputStream fos = null;
+
+                try {
+                    String filename = String.format("Screenshot-%s.png", UUID.randomUUID().toString());
+                    fos = new FileOutputStream(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/" + filename);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                } catch (Exception ex){
+                    ex.printStackTrace();
+                } finally {
+                    if(fos != null){
+                        try {
+                            fos.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                mRootView.destroyDrawingCache();
+            }
+        });
     }
 
     @Override

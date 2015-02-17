@@ -33,4 +33,11 @@
         android:layout_gravity="top"
         android:text="@string/start"/>
 
+    <Button
+            android:id="@+id/snapshot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:text="Capture"/>
+
 </LinearLayout>
